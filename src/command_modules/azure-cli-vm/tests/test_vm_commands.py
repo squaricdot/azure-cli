@@ -439,7 +439,6 @@ class VMManagedDiskScenarioTest(ResourceGroupVCRTestBase):
             self.resource_group, snapshot_name2, disk_name, 'Premium_LRS'))
 
         # till now, image creation doesn't inspect the disk for os, so the command below should succeed with junk disk
-        # pylint: disable=too-many-format-args
         self.cmd('image create -g {} -n {} --source {} --data-disk-sources {} {} {} --os-type Linux --tags tag1=i1'.format(
             self.resource_group, image_name, snapshot_name, disk_name, data_snapshot['id'], data_disk2['id']), checks=[
             JMESPathCheck('storageProfile.osDisk.osType', 'Linux'),
@@ -1154,15 +1153,17 @@ class VMDiskAttachDetachTest(ResourceGroupVCRTestBase):
     def body(self):
         disk_name = 'd1'
         disk_name2 = 'd2'
-        self.cmd('vm disk attach -g {} --vm-name {} --disk {} --new --size-gb 1'.format(
+        self.cmd('vm disk attach -g {} --vm-name {} --disk {} --new --size-gb 1 --caching ReadOnly'.format(
             self.resource_group, self.vm_name, disk_name))
         self.cmd('vm disk attach -g {} --vm-name {} --disk {} --new --size-gb 2 --lun 2'.format(
             self.resource_group, self.vm_name, disk_name2))
         self.cmd('vm show -g {} -n {}'.format(self.resource_group, self.vm_name), checks=[
             JMESPathCheck('length(storageProfile.dataDisks)', 2),
             JMESPathCheck('storageProfile.dataDisks[0].name', disk_name),
+            JMESPathCheck('storageProfile.dataDisks[0].caching', 'ReadOnly'),
             JMESPathCheck('storageProfile.dataDisks[1].name', disk_name2),
             JMESPathCheck('storageProfile.dataDisks[1].lun', 2),
+            JMESPathCheck('storageProfile.dataDisks[1].caching', 'None')
         ])
         self.cmd('vm disk detach -g {} --vm-name {} -n {}'.format(
             self.resource_group, self.vm_name, disk_name2))
@@ -1174,6 +1175,11 @@ class VMDiskAttachDetachTest(ResourceGroupVCRTestBase):
             self.resource_group, self.vm_name, disk_name))
         self.cmd('vm show -g {} -n {}'.format(self.resource_group, self.vm_name), checks=[
             JMESPathCheck('length(storageProfile.dataDisks)', 0),
+        ])
+        self.cmd('vm disk attach -g {} --vm-name {} --disk {} --caching ReadWrite'.format(
+            self.resource_group, self.vm_name, disk_name))
+        self.cmd('vm show -g {} -n {}'.format(self.resource_group, self.vm_name), checks=[
+            JMESPathCheck('storageProfile.dataDisks[0].caching', 'ReadWrite')
         ])
 
 

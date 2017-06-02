@@ -3,7 +3,7 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-# pylint: disable=no-self-use,too-many-arguments,too-many-lines
+# pylint: disable=no-self-use,too-many-lines
 from __future__ import print_function
 import getpass
 import json
@@ -345,7 +345,7 @@ def attach_managed_data_disk(resource_group_name, vm_name, disk,
     else:
         params = ManagedDiskParameters(id=disk,
                                        storage_account_type=sku)
-        data_disk = DataDisk(lun, DiskCreateOptionTypes.attach, managed_disk=params)
+        data_disk = DataDisk(lun, DiskCreateOptionTypes.attach, managed_disk=params, caching=caching)
 
     vm.storage_profile.data_disks.append(data_disk)
     set_vm(vm)
@@ -548,14 +548,14 @@ def attach_unmanaged_data_disk(resource_group_name, vm_name, new=False, vhd_uri=
 
 def _get_disk_lun(data_disks):
     # start from 0, search for unused int for lun
-    if data_disks:
-        existing_luns = sorted([d.lun for d in data_disks])
-        for i in range(len(existing_luns)):  # pylint: disable=consider-using-enumerate
-            if existing_luns[i] != i:
-                return i
-        return len(existing_luns)
+    if not data_disks:
+        return 0
 
-    return 0
+    existing_luns = sorted([d.lun for d in data_disks])
+    for i, current in enumerate(existing_luns):
+        if current != i:
+            return i
+    return len(existing_luns)
 
 
 def resize_vm(resource_group_name, vm_name, size, no_wait=False):
